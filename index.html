@@ -53,28 +53,32 @@
     @keyframes glitch { 0%,100% { transform: translate(0); } 20% { transform: translate(-2px, 2px); } 40% { transform: translate(-2px, -2px); } 60% { transform: translate(2px, 2px); } }
     .subtitle { color: #00ffff; font-size: 1.4rem; margin-top: 10px; }
 
-    /* 月份切换器 */
+    /* 月份下拉选项 */
     .month-selector {
       text-align: center;
       margin: 20px 0;
       z-index: 10;
     }
-    .month-btn {
+    .month-select {
       background: rgba(255,0,255,0.2);
       border: 1px solid #ff00ff;
       color: #ff00ff;
       padding: 10px 20px;
-      margin: 5px;
       border-radius: 25px;
+      font-size: 1rem;
       cursor: pointer;
-      transition: all 0.3s;
       box-shadow: 0 0 10px rgba(255,0,255,0.3);
+      transition: all 0.3s;
     }
-    .month-btn:hover, .month-btn.active {
+    .month-select:hover, .month-select:focus {
       background: #ff00ff;
       color: #000;
       box-shadow: 0 0 20px #ff00ff;
-      transform: scale(1.05); /* 3D 倾斜 hover */
+      outline: none;
+    }
+    .month-select option {
+      background: #302b63;
+      color: #00ffff;
     }
 
     .container { max-width: 1600px; margin: 0 auto; padding: 20px; position: relative; z-index: 10; }
@@ -144,11 +148,11 @@
   </header>
 
   <div class="month-selector" id="monthSelector">
-    <!-- JS 动态生成月份按钮 -->
+    <!-- JS 动态生成下拉选项 -->
   </div>
 
   <div class="container">
-    <div id="loading" class="loading">加载数据中...（支持月份切换）</div>
+    <div id="loading" class="loading">加载数据中...（首次默认最新月份）</div>
 
     <div class="stats" id="stats" style="display:none;">
       <div class="stat-card"><h3 id="totalExp">0</h3><p>总展现量</p></div>
@@ -171,14 +175,14 @@
 
   <footer>
     数据最后更新：<span class="update" id="lastUpdate">加载中...</span><br>
-    优化：月份切换看板 + 周询盘/接待趋势 | 每周上传 data.xlsx 自动刷新
+    优化：下拉月份切换 + 首次默认最新数据 | 每周上传 data.xlsx 自动刷新
   </footer>
 
   <script>
     let allData = [];
     let currentMonth = ''; // 当前选中的月份 (YYYY-MM)
 
-    // Excel 序列号转日期
+    // Excel 序列号转日期（修复版）
     function excelToDate(serial) {
       const utc_days = Math.floor(serial - 25569);
       const date_info = new Date(utc_days * 86400 * 1000);
@@ -212,49 +216,59 @@
 
         if (allData.length === 0) throw new Error('无有效数据');
 
+        document.getElementById('loading').innerHTML = `成功加载 ${allData.length} 天数据...`;
         initMonthSelector();
-        renderAll();
+        // 首次默认最新月份并渲染
+        const latestMonth = format(allData[allData.length - 1].date, 'yyyy-MM');
+        switchMonth(latestMonth);
       } catch (e) {
-        document.getElementById('loading').innerHTML = `加载失败：${e.message}`;
+        document.getElementById('loading').innerHTML = `加载失败：${e.message}<br>提示：检查 data.xlsx 日期列（row3+ 数字序列）。`;
       }
     }
 
-    // 初始化月份选择器
+    // 初始化月份下拉
     function initMonthSelector() {
       const months = [...new Set(allData.map(d => format(d.date, 'yyyy-MM')))].sort();
       const container = document.getElementById('monthSelector');
       container.innerHTML = '<strong style="color:#00ffff; margin-right:10px;">月份切换：</strong>';
+      
+      const select = document.createElement('select');
+      select.className = 'month-select';
+      select.onchange = function() {
+        if (this.value) switchMonth(this.value);
+      };
+      
       months.forEach(m => {
-        const btn = document.createElement('button');
-        btn.className = 'month-btn';
-        btn.textContent = m;
-        btn.onclick = () => switchMonth(m);
-        container.appendChild(btn);
+        const option = document.createElement('option');
+        option.value = m;
+        option.textContent = m;
+        select.appendChild(option);
       });
-      if (months.length > 0) {
-        switchMonth(months[months.length - 1]); // 默认最新月份
-      }
+      
+      container.appendChild(select);
+      select.value = months[months.length - 1] || ''; // 默认最新
     }
 
-    // 切换月份
+    // 切换月份（修复事件问题）
     function switchMonth(month) {
       currentMonth = month;
-      document.querySelectorAll('.month-btn').forEach(b => b.classList.remove('active'));
-      event.target.classList.add('active');
+      document.querySelector('.month-select').value = month; // 更新下拉选中
       renderAll();
     }
 
     // 格式化日期 (date-fns)
     function format(date, fmt) {
-      return date.toISOString().slice(0, fmt === 'yyyy-MM' ? 7 : 10);
+      if (fmt === 'yyyy-MM') return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
+      if (fmt === 'MM-dd') return String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+      return date.toISOString().slice(0, 10);
     }
 
     // 获取周号
     function getWeekNumber(date) {
       const start = new Date(date.getFullYear(), 0, 1);
-      const diff = date - start;
+      const diff = (date - start) + ((start.getTimezoneOffset() - date.getTimezoneOffset()) * 60000);
       const oneWeek = 86400000 * 7;
-      return Math.ceil((diff + start.getTimezoneOffset() * 60000) / oneWeek);
+      return Math.ceil(diff / oneWeek);
     }
 
     // 渲染全部
@@ -277,7 +291,7 @@
       document.getElementById('totalExp').textContent = total.totalExp.toLocaleString();
       document.getElementById('totalVis').textContent = total.visitors.toLocaleString();
       document.getElementById('totalInq').textContent = total.inquiries;
-      document.getElementById('totalRec').textContent = total.reception; // 新增接待总数
+      document.getElementById('totalRec').textContent = total.reception;
       document.getElementById('convRate').textContent = total.visitors > 0 ? (total.inquiries / total.visitors * 100).toFixed(2) + '%' : '0%';
       document.getElementById('adRate').textContent = total.totalExp > 0 ? (total.adExp / total.totalExp * 100).toFixed(1) + '%' : '0%';
       document.getElementById('lastUpdate').textContent = new Date().toLocaleString('zh-CN');
@@ -315,7 +329,7 @@
         options: { plugins: { legend: { position: 'bottom', labels: { color: '#00ffff' } } } }
       });
 
-      // 3. 周询盘 & 周接待趋势（替换：访客 -> 接待）
+      // 3. 周询盘 & 周接待趋势
       const weeks = {};
       displayData.forEach(d => {
         const week = getWeekNumber(d.date);
@@ -352,7 +366,7 @@
 
       // 5. 月度询盘
       const months = {};
-      allData.forEach(d => { // 全数据月度，避免空
+      allData.forEach(d => {
         const m = format(d.date, 'yyyy-MM');
         if (!months[m]) months[m] = 0;
         months[m] += d.inquiries;
