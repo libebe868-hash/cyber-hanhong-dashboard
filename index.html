@@ -3,11 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>汉鸿店铺 · 数据战情室 Pro</title>
+  <title>汉鸿店铺 · 霓虹战情室 Pro</title>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
-  <script src="https://cdn.jsdelivr.net/npm/date-fns@2"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@500;700&display=swap');
     * { margin:0; padding:0; box-sizing:border-box; }
@@ -144,8 +143,8 @@
   <div class="glow-line"></div>
 
   <header>
-    <h1>汉鸿店铺 · 数据战情室 Pro</h1>
-    <p class="subtitle">阿里巴巴实时作战看板 · 月份切换 & 周趋势优化</p>
+    <h1>汉鸿店铺 · 霓虹战情室 Pro</h1>
+    <p class="subtitle">阿里巴巴国际站实时作战看板 · 月份切换 & 周趋势优化</p>
   </header>
 
   <div class="month-selector" id="monthSelector">
@@ -181,6 +180,8 @@
   </footer>
 
   <script>
+    Chart.register(ChartDataLabels);
+
     let allData = [];
     let currentMonth = ''; // 当前选中的月份 (YYYY-MM)
 
@@ -294,8 +295,15 @@
 
       // 计算上个月
       const currentDate = new Date(currentMonth + '-01');
-      const lastMonthDate = dateFns.subMonths(currentDate, 1);
-      const lastMonth = format(lastMonthDate, 'yyyy-MM');
+      let lastMonthYear = currentDate.getFullYear();
+      let lastMonthMonth = currentDate.getMonth(); // 0-based
+      if (lastMonthMonth === 0) {
+        lastMonthMonth = 12;
+        lastMonthYear--;
+      } else {
+        lastMonthMonth--;
+      }
+      const lastMonth = lastMonthYear + '-' + String(lastMonthMonth).padStart(2, '0');
       const lastMonthData = allData.filter(d => format(d.date, 'yyyy-MM') === lastMonth);
       const lastTotal = lastMonthData.reduce((acc, d) => ({
         visitors: acc.visitors + d.visitors,
@@ -309,6 +317,8 @@
         momConv = ((convRate - lastConvRate) / lastConvRate * 100).toFixed(2) + '%';
       } else if (convRate > 0) {
         momConv = '∞%'; // 如果上月为0，本月有增长
+      } else if (lastConvRate === 0 && convRate === 0) {
+        momConv = '0%';
       }
 
       // 更新总览（添加接待）
@@ -349,8 +359,7 @@
               formatter: Math.round
             }
           }
-        },
-        plugins: [ChartDataLabels]
+        }
       });
 
       // 2. 饼图（添加数据显示）
@@ -372,8 +381,7 @@
               }
             }
           } 
-        },
-        plugins: [ChartDataLabels]
+        }
       });
 
       // 3. 周询盘 & 周接待趋势（添加数据点显示）
@@ -404,8 +412,7 @@
               formatter: Math.round
             }
           } 
-        },
-        plugins: [ChartDataLabels]
+        }
       });
 
       // 4. 漏斗（添加接待）
@@ -436,7 +443,17 @@
           labels: monthLabels,
           datasets: [{ label: '月询盘总量', data: monthLabels.map(m => months[m]), backgroundColor: '#ff00ff' }]
         },
-        options: { plugins: { legend: { labels: { color: '#00ffff' } } } }
+        options: { 
+          plugins: { 
+            legend: { labels: { color: '#00ffff' } },
+            datalabels: {
+              color: '#fff',
+              anchor: 'end',
+              align: 'top',
+              formatter: Math.round
+            }
+          } 
+        }
       });
 
       // 6. 热力图
@@ -451,7 +468,17 @@
             backgroundColor: growthData.map(g => g > 0 ? 'rgba(0,255,136,0.8)' : 'rgba(255,0,102,0.8)') 
           }]
         },
-        options: { plugins: { legend: { labels: { color: '#00ffff' } } } }
+        options: { 
+          plugins: { 
+            legend: { labels: { color: '#00ffff' } },
+            datalabels: {
+              color: '#fff',
+              anchor: 'end',
+              align: 'top',
+              formatter: (value) => value.toFixed(2) + '%'
+            }
+          } 
+        }
       });
     }
 
