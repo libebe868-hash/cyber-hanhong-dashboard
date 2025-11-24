@@ -7,7 +7,6 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
-  <script src="https://cdn.jsdelivr.net/npm/date-fns@2"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@500;700&display=swap');
     * { margin:0; padding:0; box-sizing:border-box; }
@@ -260,7 +259,7 @@
       renderAll();
     }
 
-    // 格式化日期 (date-fns)
+    // 格式化日期
     function format(date, fmt) {
       if (fmt === 'yyyy-MM') return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
       if (fmt === 'MM-dd') return String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
@@ -296,8 +295,15 @@
 
       // 计算上个月
       const currentDate = new Date(currentMonth + '-01');
-      const lastMonthDate = dateFns.subMonths(currentDate, 1);
-      const lastMonth = format(lastMonthDate, 'yyyy-MM');
+      let lastMonthYear = currentDate.getFullYear();
+      let lastMonthMonth = currentDate.getMonth(); // 0-based
+      if (lastMonthMonth === 0) {
+        lastMonthMonth = 12;
+        lastMonthYear--;
+      } else {
+        lastMonthMonth--;
+      }
+      const lastMonth = lastMonthYear + '-' + String(lastMonthMonth + 1).padStart(2, '0');
       const lastMonthData = allData.filter(d => format(d.date, 'yyyy-MM') === lastMonth);
       const lastTotal = lastMonthData.reduce((acc, d) => ({
         visitors: acc.visitors + d.visitors,
@@ -309,6 +315,8 @@
       let momConv = 'N/A';
       if (lastConvRate > 0) {
         momConv = ((convRate - lastConvRate) / lastConvRate * 100).toFixed(2) + '%';
+      } else if (convRate > 0) {
+        momConv = '∞%';
       }
 
       // 更新总览（添加接待）
