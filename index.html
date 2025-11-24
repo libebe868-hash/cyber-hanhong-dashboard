@@ -1,335 +1,371 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>汉鸿店铺 · 数据战情室</title>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/date-fns@2"></script>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@500;700&display=swap');
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body {
-      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
-      color: #fff;
-      font-family: 'Rajdhani', sans-serif;
-      min-height: 100vh;
-      overflow-x: hidden;
-      position: relative;
-    }
-    .stars { 
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; 
-      background: radial-gradient(2px 2px at 20px 30px, #eee, transparent), radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.8), transparent), 
-                  radial-gradient(1px 1px at 90px 40px, #fff, transparent), radial-gradient(1px 1px at 130px 80px, rgba(255,255,255,0.6), transparent);
-      background-repeat: repeat; 
-      background-size: 200px 100px;
-      animation: twinkle 8s linear infinite; 
-    }
-    @keyframes twinkle { 0% { transform: translate(0,0) rotate(0deg); } 100% { transform: translate(50px,50px) rotate(360deg); } }
-    .glow-line { position: absolute; top: 80px; left: 0; width: 100%; height: 2px; background: linear-gradient(90deg, transparent, #00ffff, transparent); box-shadow: 0 0 20px #00ffff; animation: flow 6s linear infinite; z-index: 2; }
-    @keyframes flow { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>汉鸿店铺 · 数据战情室 - 优化版</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <style>
+        /* 基础样式 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0a0a;
+            color: #fff;
+            overflow-x: hidden;
+        }
 
-    header {
-      text-align: center;
-      padding: 30px 20px;
-      position: relative;
-      z-index: 10;
-    }
-    h1 {
-      font-family: 'Orbitron', monospace;
-      font-size: 4.5rem;
-      background: linear-gradient(45deg, #ff00ff, #00ffff, #ff00ff);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      text-shadow: 0 0 40px rgba(0,255,255,0.8);
-      animation: neon 3s infinite alternate;
-    }
-    @keyframes neon { from { filter: brightness(1); } to { filter: brightness(1.5); } }
-    .subtitle { color: #00ffff; font-size: 1.4rem; margin-top: 10px; }
+        /* 灯光效果：霓虹辉光和动画 */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, #ff00ff, #00ffff, #ffff00, #ff0000, #00ff00);
+            background-size: 400% 400%;
+            opacity: 0.1;
+            z-index: -1;
+            animation: neonGlow 4s ease-in-out infinite alternate;
+            filter: blur(100px);
+        }
+        @keyframes neonGlow {
+            0% { background-position: 0% 50%; opacity: 0.05; }
+            100% { background-position: 100% 50%; opacity: 0.15; }
+        }
 
-    .container { max-width: 1600px; margin: 0 auto; padding: 20px; position: relative; z-index: 10; }
-    .stats {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 20px;
-      margin: 30px 0;
-    }
-    .stat-card {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid #00ffff;
-      border-radius: 15px;
-      padding: 20px;
-      text-align: center;
-      backdrop-filter: blur(10px);
-      box-shadow: 0 8px 32px rgba(0,255,255,0.2);
-      transition: all 0.4s;
-    }
-    .stat-card:hover { transform: translateY(-10px); box-shadow: 0 20px 40px rgba(0,255,255,0.4); }
-    .stat-card h3 { font-size: 2.5rem; color: #ff00ff; text-shadow: 0 0 20px #ff00ff; margin: 10px 0; }
-    .stat-card p { color: #00ffff; font-size: 1rem; }
+        /* 容器 */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
 
-    .charts-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
-      gap: 25px;
-      margin-top: 30px;
-    }
-    .chart-card {
-      background: rgba(0,0,0,0.4);
-      border: 1px solid #00ffff;
-      border-radius: 15px;
-      padding: 20px;
-      box-shadow: 0 0 30px rgba(0,255,255,0.3);
-      backdrop-filter: blur(10px);
-    }
-    .chart-card h3 { color: #00ffff; text-align: center; margin-bottom: 15px; font-size: 1.3rem; }
+        /* 头部：月份切换 */
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            animation: fadeInDown 1s ease-out;
+        }
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-50px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .month-selector {
+            display: inline-block;
+            background: rgba(0, 255, 255, 0.1);
+            border: 2px solid #00ffff;
+            border-radius: 50px;
+            padding: 10px 20px;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(0, 255, 255, 0.5); }
+            50% { box-shadow: 0 0 30px rgba(0, 255, 255, 0.8); }
+        }
+        select {
+            background: transparent;
+            border: none;
+            color: #00ffff;
+            font-size: 18px;
+            outline: none;
+        }
 
-    footer {
-      text-align: center;
-      padding: 40px;
-      color: #00ffff;
-      font-size: 1.1rem;
-      margin-top: 50px;
-    }
-    .update { color: #ff00ff; animation: pulse 2s infinite; }
-    @keyframes pulse { 0%,100% { opacity: 0.7; } 50% { opacity: 1; } }
-    .loading { text-align: center; padding: 50px; color: #00ffff; font-size: 1.2rem; }
-    .error { color: #ff0066; font-weight: bold; }
-  </style>
+        /* 网格布局 */
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        /* 卡片样式：酷炫3D和辉光 */
+        .card {
+            background: rgba(10, 10, 10, 0.8);
+            border: 1px solid #333;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(0, 255, 255, 0.1), transparent);
+            transform: rotate(45deg);
+            transition: all 0.5s;
+            opacity: 0;
+        }
+        .card:hover::before {
+            opacity: 1;
+            animation: shine 0.5s ease-in-out;
+        }
+        @keyframes shine {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+        .card:hover {
+            transform: translateY(-10px) rotateX(5deg);
+            box-shadow: 0 20px 40px rgba(0, 255, 255, 0.3), 0 0 50px rgba(0, 255, 255, 0.2);
+        }
+
+        .card h3 {
+            color: #00ffff;
+            margin-bottom: 15px;
+            text-align: center;
+            text-shadow: 0 0 10px #00ffff;
+        }
+
+        .key-metric {
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffff00;
+            text-shadow: 0 0 15px #ffff00;
+            margin-bottom: 10px;
+        }
+
+        /* 趋势图块 */
+        .trend-section {
+            grid-column: 1 / -1;
+            background: rgba(10, 10, 10, 0.8);
+            border: 1px solid #333;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            animation: fadeInUp 1s ease-out 0.5s both;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(50px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .trend-section h3 {
+            color: #ff00ff;
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px #ff00ff;
+        }
+        #trendChart {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            padding: 10px;
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            .month-selector {
+                padding: 5px 10px;
+            }
+        }
+    </style>
 </head>
 <body>
-  <div class="stars"></div>
-  <div class="glow-line"></div>
+    <div class="container">
+        <div class="header">
+            <div class="month-selector">
+                <label for="monthSelect">选择月份: </label>
+                <select id="monthSelect" onchange="updateDashboard()">
+                    <option value="2025-01">2025年1月</option>
+                    <option value="2025-02">2025年2月</option>
+                    <option value="2025-03" selected>2025年3月</option>
+                    <option value="2025-04">2025年4月</option>
+                    <option value="2025-05">2025年5月</option>
+                    <option value="2025-11" selected>2025年11月</option>
+                </select>
+            </div>
+        </div>
 
-  <header>
-    <h1>汉鸿店铺 · 数据战情室</h1>
-    <p class="subtitle">阿里巴巴实时作战看板 · 数据分析 & 趋势洞察</p>
-  </header>
+        <div class="dashboard" id="dashboard">
+            <!-- 关键数据卡片：示例数据，实际可从API或文件加载 -->
+            <div class="card">
+                <h3>询盘总数</h3>
+                <div class="key-metric" id="inquiryTotal">1,234</div>
+                <div>环比增长: +12%</div>
+            </div>
+            <div class="card">
+                <h3>接待人数</h3>
+                <div class="key-metric" id="receptionTotal">567</div>
+                <div>环比增长: +8%</div>
+            </div>
+            <div class="card">
+                <h3>转化率</h3>
+                <div class="key-metric" id="conversionRate">45.8%</div>
+                <div>环比增长: +3.2%</div>
+            </div>
+            <div class="card">
+                <h3>平均客单价</h3>
+                <div class="key-metric" id="avgPrice">¥2,456</div>
+                <div>环比增长: +15%</div>
+            </div>
+            <!-- 添加更多卡片... -->
+        </div>
 
-  <div class="container">
-    <div id="loading" class="loading">加载数据中...（解析 Excel 序列号）</div>
-
-    <div class="stats" id="stats" style="display:none;">
-      <div class="stat-card"><h3 id="totalExp">0</h3><p>总展现量</p></div>
-      <div class="stat-card"><h3 id="totalVis">0</h3><p>总访客数</p></div>
-      <div class="stat-card"><h3 id="totalInq">0</h3><p>月度询盘总量</p></div>
-      <div class="stat-card"><h3 id="convRate">0%</h3><p>询盘转化率</p></div>
-      <div class="stat-card"><h3 id="adRate">0%</h3><p>广告流量占比</p></div>
-      <div class="stat-card"><h3 id="growth">0%</h3><p>询盘环比增长</p></div>
+        <!-- 趋势图块 -->
+        <div class="trend-section">
+            <h3>询盘 & 接待人数趋势</h3>
+            <canvas id="trendChart" width="800" height="400"></canvas>
+        </div>
     </div>
 
-    <div class="charts-grid" id="charts" style="display:none;">
-      <div class="chart-card"><h3>全期趋势（展现/访客/询盘）</h3><canvas id="trendChart" height="300"></canvas></div>
-      <div class="chart-card"><h3>广告 vs 自然流量占比</h3><canvas id="pieChart" height="300"></canvas></div>
-      <div class="chart-card"><h3>周度访客 & 询盘趋势</h3><canvas id="weeklyChart" height="300"></canvas></div>
-      <div class="chart-card"><h3>询盘转化漏斗</h3><canvas id="funnelChart" height="300"></canvas></div>
-      <div class="chart-card"><h3>月度询盘总量（全期）</h3><canvas id="monthlyChart" height="300"></canvas></div>
-      <div class="chart-card"><h3>每日询盘增长热力图</h3><canvas id="heatmapChart" height="300"></canvas></div>
-    </div>
-  </div>
+    <script>
+        // 模拟数据：按月份
+        const dataByMonth = {
+            '2025-01': {
+                inquiryTotal: 1000,
+                receptionTotal: 400,
+                conversionRate: '40%',
+                avgPrice: '¥2000',
+                trend: { months: ['1/1', '1/8', '1/15', '1/22', '1/29'], inquiries: [100, 120, 110, 130, 140], receptions: [50, 55, 60, 65, 70] }
+            },
+            '2025-02': {
+                inquiryTotal: 1100,
+                receptionTotal: 450,
+                conversionRate: '42%',
+                avgPrice: '¥2100',
+                trend: { months: ['2/1', '2/8', '2/15', '2/22'], inquiries: [110, 125, 115, 135], receptions: [52, 58, 62, 68] }
+            },
+            '2025-03': {
+                inquiryTotal: 1234,
+                receptionTotal: 567,
+                conversionRate: '45.8%',
+                avgPrice: '¥2456',
+                trend: { months: ['3/1', '3/8', '3/15', '3/22', '3/29'], inquiries: [120, 140, 130, 150, 160], receptions: [55, 60, 65, 70, 75] }
+            },
+            '2025-04': {
+                inquiryTotal: 1350,
+                receptionTotal: 600,
+                conversionRate: '47%',
+                avgPrice: '¥2600',
+                trend: { months: ['4/1', '4/8', '4/15', '4/22', '4/29'], inquiries: [130, 150, 140, 160, 170], receptions: [58, 63, 68, 73, 78] }
+            },
+            '2025-05': {
+                inquiryTotal: 1450,
+                receptionTotal: 650,
+                conversionRate: '48.5%',
+                avgPrice: '¥2700',
+                trend: { months: ['5/1', '5/8', '5/15', '5/22', '5/29'], inquiries: [140, 160, 150, 170, 180], receptions: [60, 65, 70, 75, 80] }
+            },
+            '2025-11': {
+                inquiryTotal: 2000,
+                receptionTotal: 900,
+                conversionRate: '55%',
+                avgPrice: '¥3000',
+                trend: { months: ['11/1', '11/8', '11/15', '11/22'], inquiries: [180, 200, 190, 210], receptions: [80, 85, 90, 95] }
+            }
+        };
 
-  <footer>
-    数据最后更新：<span class="update" id="lastUpdate">加载中...</span><br>
-    趋势洞察：询盘峰值出现在第12周，广告占比高但自然流量有增长潜力 | 每周上传 data.xlsx 自动刷新
-  </footer>
+        let currentChart = null;
 
-  <script>
-    // Excel 序列号转日期（修复版：处理 UTC + 时区）
-    function excelToDate(serial) {
-      const utc_days = Math.floor(serial - 25569);
-      const utc_value = utc_days * 86400;
-      const date_info = new Date((utc_value * 1000) + (utc_value % 86400 * 1000)); // 修复时间部分
-      const year = date_info.getFullYear();
-      const month = date_info.getMonth();
-      const day = date_info.getDate();
-      return new Date(year, month, day);
-    }
-
-    // 加载数据（增强过滤：跳过所有空/无效行）
-    async function loadData() {
-      try {
-        const response = await fetch('data.xlsx?t=' + Date.now());
-        if (!response.ok) throw new Error('data.xlsx 未找到（404）');
-        const arrayBuffer = await response.arrayBuffer();
-        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-
-        // 从第3行开始，严格过滤：日期必须是数字 > 45000，非空行
-        let data = rows.slice(2)
-          .filter(row => {
-            const dateVal = row[0];
-            return dateVal !== undefined && dateVal !== null && dateVal !== '' && !isNaN(dateVal) && Number(dateVal) > 45000;
-          })
-          .map(row => ({
-            date: excelToDate(Number(row[0])),
-            totalExp: Number(row[1]) || 0,
-            adExp: Number(row[2]) || 0,
-            naturalExp: Number(row[3]) || 0,
-            visitors: Number(row[4]) || 0,
-            inquiries: Number(row[5]) || 0,
-            reception: Number(row[6]) || 0,
-          }))
-          .filter(d => d.totalExp > 0 || d.visitors > 0); // 只保留有数据的行
-
-        data.sort((a, b) => a.date - b.date); // 按日期升序
-
-        if (data.length === 0) throw new Error('无有效数据行（检查 row3+ 是否有数字日期）');
-
-        document.getElementById('loading').innerHTML = `成功加载 ${data.length} 天数据...`;
-        renderAll(data);
-      } catch (e) {
-        document.getElementById('loading').innerHTML = `<span class="error">加载失败：${e.message}</span><br>提示：确保 data.xlsx 第一列是日期序列号（e.g., 45962），从 row3 开始无空行。`;
-      }
-    }
-
-    function renderAll(data) {
-      const total = data.reduce((acc, d) => ({
-        totalExp: acc.totalExp + d.totalExp,
-        visitors: acc.visitors + d.visitors,
-        inquiries: acc.inquiries + d.inquiries,
-        adExp: acc.adExp + d.adExp,
-        naturalExp: acc.naturalExp + d.naturalExp
-      }), { totalExp: 0, visitors: 0, inquiries: 0, adExp: 0, naturalExp: 0 });
-
-      // 增长：最近 vs 前半期（全数据）
-      const mid = Math.floor(data.length / 2);
-      const recentInq = data.slice(mid).reduce((sum, d) => sum + d.inquiries, 0);
-      const prevInq = data.slice(0, mid).reduce((sum, d) => sum + d.inquiries, 0);
-      const growth = prevInq > 0 ? ((recentInq - prevInq) / prevInq * 100) : 0;
-
-      // 更新总览
-      document.getElementById('totalExp').textContent = total.totalExp.toLocaleString();
-      document.getElementById('totalVis').textContent = total.visitors.toLocaleString();
-      document.getElementById('totalInq').textContent = total.inquiries;
-      document.getElementById('convRate').textContent = total.visitors > 0 ? (total.inquiries / total.visitors * 100).toFixed(2) + '%' : '0%';
-      document.getElementById('adRate').textContent = total.totalExp > 0 ? (total.adExp / total.totalExp * 100).toFixed(1) + '%' : '0%';
-      document.getElementById('growth').textContent = growth >= 0 ? '+' + growth.toFixed(1) + '%' : growth.toFixed(1) + '%';
-      document.getElementById('growth').style.color = growth >= 0 ? '#00ff88' : '#ff0066';
-      document.getElementById('lastUpdate').textContent = new Date().toLocaleString('zh-CN');
-
-      document.getElementById('loading').style.display = 'none';
-      document.getElementById('stats').style.display = 'grid';
-      document.getElementById('charts').style.display = 'grid';
-
-      const labels = data.map(d => d.date.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }));
-
-      // 1. 全期趋势图
-      new Chart(document.getElementById('trendChart'), {
-        type: 'line',
-        data: {
-          labels: labels,
-          datasets: [
-            { label: '总展现', data: data.map(d => d.totalExp), borderColor: '#00ffff', tension: 0.4, yAxisID: 'y' },
-            { label: '访客', data: data.map(d => d.visitors), borderColor: '#ff00ff', tension: 0.4, yAxisID: 'y1' },
-            { label: '询盘', data: data.map(d => d.inquiries), borderColor: '#ffff00', tension: 0.4, yAxisID: 'y1' }
-          ]
-        },
-        options: {
-          scales: { 
-            y: { position: 'left', grid: { color: 'rgba(0,255,255,0.1)' } }, 
-            y1: { position: 'right', grid: { drawOnChartArea: false } } 
-          },
-          plugins: { legend: { labels: { color: '#00ffff' } } }
+        // 初始化仪表板
+        function initDashboard() {
+            updateDashboard();
+            initChart();
         }
-      });
 
-      // 2. 流量占比
-      new Chart(document.getElementById('pieChart'), {
-        type: 'doughnut',
-        data: {
-          labels: ['广告展现', '自然展现'],
-          datasets: [{ data: [total.adExp, total.naturalExp], backgroundColor: ['#ff00ff', '#00ffff'], borderWidth: 3 }]
-        },
-        options: { plugins: { legend: { position: 'bottom', labels: { color: '#00ffff' } } } }
-      });
+        // 更新仪表板数据
+        function updateDashboard() {
+            const selectedMonth = document.getElementById('monthSelect').value;
+            const data = dataByMonth[selectedMonth];
 
-      // 3. 周度趋势
-      data.forEach(d => { 
-        d.week = getWeekNumber(d.date); 
-      });
-      const weeks = {};
-      data.forEach(d => {
-        const w = d.week;
-        if (!weeks[w]) weeks[w] = { visitors: 0, inquiries: 0 };
-        weeks[w].visitors += d.visitors;
-        weeks[w].inquiries += d.inquiries;
-      });
-      const weekLabels = Object.keys(weeks).sort((a,b) => a - b);
-      new Chart(document.getElementById('weeklyChart'), {
-        type: 'line',
-        data: {
-          labels: weekLabels.map(w => '第' + w + '周'),
-          datasets: [
-            { label: '周访客', data: weekLabels.map(w => weeks[w].visitors), borderColor: '#00ffff', tension: 0.4 },
-            { label: '周询盘', data: weekLabels.map(w => weeks[w].inquiries), borderColor: '#ff00ff', tension: 0.4 }
-          ]
-        },
-        options: { plugins: { legend: { labels: { color: '#00ffff' } } } }
-      });
+            document.getElementById('inquiryTotal').textContent = data.inquiryTotal.toLocaleString();
+            document.getElementById('receptionTotal').textContent = data.receptionTotal.toLocaleString();
+            document.getElementById('conversionRate').textContent = data.conversionRate;
+            document.getElementById('avgPrice').textContent = data.avgPrice;
 
-      // 4. 漏斗
-      new Chart(document.getElementById('funnelChart'), {
-        type: 'bar',
-        data: {
-          labels: ['总展现', '总访客', '询盘'],
-          datasets: [{ data: [total.totalExp, total.visitors, total.inquiries], backgroundColor: ['#00ffff', '#ff00ff', '#ffff00'] }]
-        },
-        options: {
-          indexAxis: 'y',
-          plugins: { legend: { display: false } },
-          scales: { x: { display: false } }
+            // 更新趋势图
+            if (currentChart) {
+                currentChart.data.labels = data.trend.months;
+                currentChart.data.datasets[0].data = data.trend.inquiries;
+                currentChart.data.datasets[1].data = data.trend.receptions;
+                currentChart.update('none');
+            }
         }
-      });
 
-      // 5. 月度询盘
-      const months = {};
-      data.forEach(d => {
-        const m = format(d.date, 'yyyy-MM');
-        if (!months[m]) months[m] = 0;
-        months[m] += d.inquiries;
-      });
-      const monthLabels = Object.keys(months).sort();
-      new Chart(document.getElementById('monthlyChart'), {
-        type: 'bar',
-        data: {
-          labels: monthLabels,
-          datasets: [{ label: '月询盘总量', data: monthLabels.map(m => months[m]), backgroundColor: '#ff00ff' }]
-        },
-        options: { plugins: { legend: { labels: { color: '#00ffff' } } } }
-      });
+        // 初始化趋势图
+        function initChart() {
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            const selectedMonth = document.getElementById('monthSelect').value;
+            const data = dataByMonth[selectedMonth];
 
-      // 6. 每日增长热力（条形颜色渐变）
-      const growthData = data.map((d, i) => i > 0 ? ((d.inquiries - data[i-1].inquiries) / Math.max(data[i-1].inquiries, 1) * 100) : 0);
-      new Chart(document.getElementById('heatmapChart'), {
-        type: 'bar',
-        data: {
-          labels: labels,
-          datasets: [{ 
-            label: '每日增长率 %', 
-            data: growthData, 
-            backgroundColor: growthData.map(g => g > 0 ? 'rgba(0,255,136,0.8)' : 'rgba(255,0,102,0.8)') 
-          }]
-        },
-        options: { plugins: { legend: { labels: { color: '#00ffff' } } } }
-      });
-    }
+            currentChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.trend.months,
+                    datasets: [
+                        {
+                            label: '询盘人数',
+                            data: data.trend.inquiries,
+                            borderColor: '#ff00ff',
+                            backgroundColor: 'rgba(255, 0, 255, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        },
+                        {
+                            label: '接待人数',
+                            data: data.trend.receptions,
+                            borderColor: '#00ffff',
+                            backgroundColor: 'rgba(0, 255, 255, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        datalabels: {
+                            color: '#fff',
+                            font: { weight: 'bold' },
+                            formatter: (value) => value
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255,255,255,0.1)' },
+                            ticks: { color: '#fff' }
+                        },
+                        x: {
+                            grid: { color: 'rgba(255,255,255,0.1)' },
+                            ticks: { color: '#fff' }
+                        }
+                    },
+                    elements: {
+                        point: {
+                            backgroundColor: '#ffff00',
+                            borderColor: '#ffff00',
+                            borderWidth: 2,
+                            radius: 5,
+                            hoverRadius: 8
+                        }
+                    },
+                    animation: {
+                        duration: 2000,
+                        easing: 'easeInOutQuart'
+                    }
+                },
+                plugins: [ChartDataLabels]
+            });
+        }
 
-    // 周号计算
-    function getWeekNumber(d) {
-      const onejan = new Date(d.getFullYear(), 0, 1);
-      return Math.ceil((((d - onejan) / 86400000) + onejan.getDay() + 1) / 7);
-    }
-
-    // date-fns format
-    function format(date, fmt) {
-      return date.toISOString().slice(0, fmt.includes('MM') ? 7 : 10).replace(/-/g, '-');
-    }
-
-    // 启动
-    loadData();
-  </script>
+        // 页面加载完成初始化
+        window.addEventListener('load', initDashboard);
+    </script>
 </body>
 </html>
