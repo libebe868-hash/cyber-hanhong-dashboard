@@ -1,114 +1,193 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-<meta charset="UTF-8">
-<title>霓虹战情室 Dashboard Pro</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+<meta charset="UTF-8" />
+<title>数据大屏 Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
 <style>
-body{background:#0d0f33;color:#fff;font-family:Arial;margin:0;padding:20px;}
-.stat-card{display:inline-block;width:200px;background:#1a1c4f;border-radius:16px;padding:20px;margin:10px;
-box-shadow:0 0 12px #00ffff55;text-align:center;}
-.stat-value{font-size:28px;color:#ff00ff;font-weight:bold;}
-.stat-title{font-size:14px;color:#41caff;}
-.chart-card{background:#1a1c4f;border-radius:20px;padding:20px;margin:20px 0;
-box-shadow:0 0 12px #00ffff33;}
+    body {
+        margin: 0;
+        background: #0b0f3b;
+        font-family: "Microsoft YaHei";
+        color: #fff;
+    }
+    .header {
+        display: flex;
+        justify-content: space-between;
+        padding: 20px 40px;
+    }
+    .stat-box {
+        width: 250px;
+        height: 100px;
+        background: rgba(255,255,255,0.05);
+        border-radius: 14px;
+        padding: 12px;
+        text-align: center;
+        border: 1px solid rgba(255,255,255,0.15);
+    }
+    .stat-value {
+        font-size: 32px;
+        font-weight: bold;
+        color: #ff28ff;
+    }
+    .stat-label {
+        color: #3beaff;
+        font-size: 16px;
+        margin-top: 6px;
+    }
+
+    .container {
+        display: grid;
+        grid-template-columns: 50% 50%;
+        grid-template-rows: 400px 400px;
+        gap: 20px;
+        padding: 20px 40px;
+    }
+    .chart-box {
+        background: rgba(255,255,255,0.04);
+        border-radius: 14px;
+        padding: 10px;
+    }
 </style>
 </head>
 <body>
 
-<h2>霓虹战情室 Dashboard Pro</h2>
+<!-- 顶部指标栏 -->
+<div class="header">
 
-<div id="stats">
-    <div class="stat-card"><div id="totalExp" class="stat-value">0</div><div class="stat-title">总展现量</div></div>
-    <div class="stat-card"><div id="totalVisitors" class="stat-value">0</div><div class="stat-title">总访客数</div></div>
-    <div class="stat-card"><div id="totalInquiries" class="stat-value">0</div><div class="stat-title">询盘总数</div></div>
-    <div class="stat-card"><div id="totalReception" class="stat-value">0</div><div class="stat-title">接待总数</div></div>
-    <div class="stat-card"><div id="conversionRate" class="stat-value">0%</div><div class="stat-title">询盘转化率</div></div>
-    <div class="stat-card"><div id="adRate" class="stat-value">0%</div><div class="stat-title">广告流量占比</div></div>
-    <div class="stat-card"><div id="momInquiries" class="stat-value">0%</div><div class="stat-title">环比上月询盘%</div></div>
+    <div class="stat-box">
+        <div class="stat-value">51,646</div>
+        <div class="stat-label">总展现量</div>
+    </div>
+
+    <div class="stat-box">
+        <div class="stat-value">1,294</div>
+        <div class="stat-label">总访客数</div>
+    </div>
+
+    <div class="stat-box">
+        <div class="stat-value">51</div>
+        <div class="stat-label">询盘总数</div>
+    </div>
+
+    <div class="stat-box">
+        <div class="stat-value">70</div>
+        <div class="stat-label">接待总数</div>
+    </div>
+
+    <div class="stat-box">
+        <div class="stat-value">3.94%</div>
+        <div class="stat-label">询盘转化率</div>
+    </div>
+
+    <div class="stat-box">
+        <div class="stat-value">92.8%</div>
+        <div class="stat-label">广告流量占比</div>
+    </div>
+
+    <div class="stat-box" style="border:2px solid #fff;">
+        <div class="stat-value">环比↑ 12.5%</div>
+        <div class="stat-label">询盘环比上月</div>
+    </div>
+
 </div>
 
-<div class="chart-card"><canvas id="pieChart"></canvas></div>
-<div class="chart-card"><canvas id="trendChart"></canvas></div>
+<!-- 图表区域 -->
+<div class="container">
+    <div id="pie1" class="chart-box"></div>
+    <div id="line1" class="chart-box"></div>
+    <div id="line2" class="chart-box"></div>
+    <div id="pie2" class="chart-box"></div>
+</div>
 
 <script>
-// ==== 示例数据（请替换为你的 Excel 解析结果） ====
-const allData = [
-    {date: new Date("2025-11-01"), totalExp:2000, visitors:300, inquiries:10, reception:12, adExp:1500, naturalExp:500},
-    {date: new Date("2025-11-02"), totalExp:3500, visitors:600, inquiries:20, reception:18, adExp:2000, naturalExp:1500}
-];
-
-const currentMonth = "2025-11";
-
-// ==== 计算环比 ====
-function getMonthInquiry(month){
-    const list = allData.filter(d => d.date.toISOString().slice(0,7) === month);
-    return list.reduce((a,b)=>a+b.inquiries,0);
-}
-
-function calcMonthMoM(month){
-    const [y,m] = month.split("-").map(Number);
-    const last = m===1 ? `${y-1}-12` : `${y}-${String(m-1).padStart(2,'0')}`;
-    const cur = getMonthInquiry(month);
-    const prev = getMonthInquiry(last);
-    if(prev===0) return "0%";
-    return ((cur-prev)/prev*100).toFixed(1)+"%";
-}
-
-document.getElementById("momInquiries").textContent = calcMonthMoM(currentMonth);
-
-// ==== 饼图 ====
-const ad = allData.reduce((a,b)=>a+b.adExp,0);
-const nat = allData.reduce((a,b)=>a+b.naturalExp,0);
-
-new Chart(document.getElementById("pieChart"),{
-    type:'doughnut',
-    data:{
-        labels:["广告展现","自然展现"],
-        datasets:[{data:[ad,nat],backgroundColor:["#00ffff","#ff00ff"]}]
-    },
-    plugins:[ChartDataLabels],
-    options:{
-        plugins:{
-            datalabels:{
-                color:"#fff",
-                font:{size:14,weight:"bold"},
-                formatter:(v,ctx)=>{
-                    const total = ctx.chart.data.datasets[0].data.reduce((x,y)=>x+y,0);
-                    return v+" ("+(v/total*100).toFixed(1)+"%)";
-                }
-            }
+/* ===========================
+   饼图 1（显示百分比）
+   =========================== */
+var pie1 = echarts.init(document.getElementById('pie1'));
+pie1.setOption({
+    title: { text: '流量来源占比', left: 'center', textStyle:{color:'#fff'} },
+    tooltip: { trigger: 'item' },
+    series: [{
+        type: 'pie',
+        radius: '65%',
+        data: [
+            { value: 928, name: '广告流量' },
+            { value: 72, name: '自然流量' }
+        ],
+        label: {
+            formatter: '{b}: {d}%',
+            color: '#fff',
+            fontSize: 16
         }
-    }
+    }]
 });
 
-// ==== 趋势折线图（含数据点文字） ====
-new Chart(document.getElementById("trendChart"),{
-    type:'line',
-    data:{
-        labels: allData.map(d=>d.date.toISOString().slice(5,10)),
-        datasets:[
-            {
-                label:"展现量",
-                data: allData.map(d=>d.totalExp),
-                borderColor:"#00ffff",
-                tension:0.3
-            }
-        ]
+/* ===========================
+   折线图 1（开启数值点显示）
+   =========================== */
+var line1 = echarts.init(document.getElementById('line1'));
+line1.setOption({
+    title: { text: '7日访客趋势', left: 'center', textStyle:{color:'#fff'} },
+    xAxis: {
+        type: 'category',
+        data: ['周一','周二','周三','周四','周五','周六','周日'],
+        axisLabel:{color:'#fff'}
     },
-    plugins:[ChartDataLabels],
-    options:{
-        plugins:{
-            datalabels:{
-                anchor:"end",
-                align:"top",
-                color:"#fff",
-                font:{size:12,weight:"bold"},
-                formatter:(v)=>v
-            }
+    yAxis: { type: 'value', axisLabel:{color:'#fff'} },
+    series: [{
+        data: [180,220,260,310,280,300,350],
+        type: 'line',
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 10,
+        label: { show: true, position:'top', color:'#fff' }
+    }]
+});
+
+/* ===========================
+   折线图 2（数值点显示）
+   =========================== */
+var line2 = echarts.init(document.getElementById('line2'));
+line2.setOption({
+    title: { text: '7日询盘趋势', left:'center', textStyle:{color:'#fff'} },
+    xAxis: {
+        type: 'category',
+        data: ['周一','周二','周三','周四','周五','周六','周日'],
+        axisLabel:{color:'#fff'}
+    },
+    yAxis: { type:'value', axisLabel:{color:'#fff'} },
+    series: [{
+        data: [5,8,6,10,7,9,6],
+        type: 'line',
+        smooth:true,
+        symbol:'circle',
+        symbolSize:10,
+        label:{ show:true, position:'top', color:'#fff' }
+    }]
+});
+
+/* ===========================
+   饼图 2（百分比）
+   =========================== */
+var pie2 = echarts.init(document.getElementById('pie2'));
+pie2.setOption({
+    title: { text:'询盘来源结构', left:'center', textStyle:{color:'#fff'} },
+    series: [{
+        type:'pie',
+        radius:'65%',
+        data:[
+            { value: 40, name: 'Facebook' },
+            { value: 25, name: 'Google' },
+            { value: 20, name: '官网' },
+            { value: 15, name: '其他' }
+        ],
+        label:{
+            formatter:'{b}: {d}%',
+            color:'#fff',
+            fontSize:16
         }
-    }
+    }]
 });
 </script>
 
