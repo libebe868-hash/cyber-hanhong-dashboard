@@ -3,262 +3,381 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>汉鸿店铺 · 2077 霓虹战情室</title>
+  <title>汉鸿店铺 · 霓虹战情室 Pro</title>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@500;700&display=swap');
     * { margin:0; padding:0; box-sizing:border-box; }
     body {
-      background: #000;
-      color: #0ff;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      color: #fff;
       font-family: 'Rajdhani', sans-serif;
+      min-height: 100vh;
       overflow-x: hidden;
       position: relative;
-      background: linear-gradient(135deg, #0a0022, #1a0033);
     }
-
-    /* 超级赛博背景 */
-    .cyber-bg {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;
-      background: 
-        radial-gradient(circle at 20% 80%, rgba(120,0,255,0.3) 0%, transparent 50%),
-        radial-gradient(circle at 80% 20%, rgba(0,255,255,0.3) 0%, transparent 50%),
-        repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,255,0.03) 2px, rgba(0,255,255,0.03) 4px);
-      animation: bgPulse 8s infinite alternate;
+    .stars { 
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; 
+      background: radial-gradient(2px 2px at 20px 30px, #eee, transparent), radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.8), transparent);
+      background-repeat: repeat; background-size: 200px 100px;
+      animation: twinkle 8s linear infinite; 
     }
-    @keyframes bgPulse { 0% { opacity: 0.7; } 100% { opacity: 1; } }
+    @keyframes twinkle { 0% { transform: translate(0,0) rotate(0deg); } 100% { transform: translate(50px,50px) rotate(360deg); } }
+    .glow-line { position: absolute; top: 80px; left: 0; width: 100%; height: 2px; background: linear-gradient(90deg, transparent, #00ffff, transparent); box-shadow: 0 0 20px #00ffff; animation: flow 6s linear infinite; z-index: 2; }
+    @keyframes flow { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
 
-    /* 故障标题 */
+    header {
+      text-align: center;
+      padding: 30px 20px;
+      position: relative;
+      z-index: 10;
+    }
     h1 {
       font-family: 'Orbitron', monospace;
-      font-size: 5rem;
+      font-size: 4.5rem;
+      background: linear-gradient(45deg, #ff00ff, #00ffff, #ff00ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 40px rgba(0,255,255,0.8);
+      animation: neon 3s infinite alternate;
+    }
+    @keyframes neon { from { filter: brightness(1); } to { filter: brightness(1.5); } }
+
+    .month-selector {
       text-align: center;
-      padding: 30px;
-      background: linear-gradient(45deg, #00ffff, #ff00ff, #ffff00, #00ffff);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      text-shadow: 0 0 40px #00ffff;
-      animation: glitchTitle 3s infinite;
-      position: relative; z-index: 10;
+      margin: 20px 0;
+      z-index: 10;
     }
-    @keyframes glitchTitle {
-      0%,100% { transform: translate(0); }
-      20% { transform: translate(-5px, 5px); text-shadow: 5px 5px #ff00ff, -5px -5px #00ffff; }
-      40% { transform: translate(5px, -5px); }
-    }
-
-    /* 超炫数值样式 */
-    .big-number {
-      font-family: 'Orbitron', monospace;
-      font-size: 4rem !important;
-      font-weight: 900;
-      background: linear-gradient(45deg, #ff00ff, #00ffff);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      text-shadow: 
-        0 0 20px #ff00ff,
-        0 0 40px #00ffff,
-        0 0 60px #ff00ff;
-      animation: neonGlow 2s infinite alternate, numberJump 0.5s ease-out;
-      display: inline-block;
-    }
-    @keyframes neonGlow { from { filter: brightness(1) saturate(1); } to { filter: brightness(1.8) saturate(2); } }
-    @keyframes numberJump { 0% { transform: translateY(0); } 50% { transform: translateY(-20px); } 100% { transform: translateY(0); } }
-
-    .big-number.purple { background: linear-gradient(45deg, #ff00ff, #8b00ff); -webkit-background-clip: text; }
-    .big-number.cyan { background: linear-gradient(45deg, #00ffff, #00ffff); -webkit-background-clip: text; }
-
-    /* 图表中心超大数值 */
-    .chart-center-mega {
-      position: absolute;
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      font-family: 'Orbitron', monospace;
-      font-size: 4.5rem !important;
-      font-weight: 900;
-      text-shadow: 
-        0 0 30px currentColor,
-        0 0 60px currentColor,
-        0 0 90px currentColor;
-      animation: megaPulse 3s infinite, glitch 2s infinite;
-      pointer-events: none;
-      z-index: 20;
-    }
-    @keyframes megaPulse { 0%,100% { opacity: 0.8; transform: translate(-50%, -50%) scale(1); } 50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); } }
-
-    /* 其他样式保持原极致赛博风格 */
-    .month-selector { text-align: center; margin: 20px 0; z-index: 10; }
     .month-select {
-      background: rgba(0,255,255,0.1);
-      border: 2px solid #00ffff;
-      color: #00ffff;
-      padding: 15px 40px;
-      border-radius: 50px;
-      font-size: 1.3rem;
+      background: rgba(255,0,255,0.2);
+      border: 1px solid #ff00ff;
+      color: #ff00ff;
+      padding: 12px 30px;
+      border-radius: 30px;
+      font-size: 1.1rem;
       cursor: pointer;
-      box-shadow: 0 0 30px #00ffff;
+      box-shadow: 0 0 15px rgba(255,0,255,0.4);
+    }
+    .month-select:hover { background: #ff00ff; color: #000; box-shadow: 0 0 25px #ff00ff; }
+
+    .container { max-width: 1600px; margin: 0 auto; padding: 20px; position: relative; z-index: 10; }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 20px;
+      margin: 30px 0;
+    }
+    .stat-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid #00ffff;
+      border-radius: 15px;
+      padding: 20px;
+      text-align: center;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 32px rgba(0,255,255,0.2);
       transition: all 0.4s;
     }
-    .month-select:hover { background: #00ffff; color: #000; transform: scale(1.05); }
+    .stat-card:hover { transform: translateY(-10px); box-shadow: 0 20px 40px rgba(0,255,255,0.4); }
+    .stat-card h3 { font-size: 2.8rem; color: #ff00ff; text-shadow: 0 0 20px #ff00ff; }
+    .stat-card p { color: #00ffff; font-size: 1rem; }
 
-    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 25px; margin: 40px 0; padding: 0 20px; }
-    .stat-card {
-      background: rgba(0,255,255,0.05);
-      border: 2px solid #00ffff;
-      border-radius: 20px;
-      padding: 30px;
-      text-align: center;
-      backdrop-filter: blur(15px);
-      box-shadow: 0 0 40px rgba(0,255,255,0.3);
-      transition: all 0.5s;
-      position: relative;
-      overflow: hidden;
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+      gap: 25px;
+      margin-top: 30px;
     }
-    .stat-card::before {
-      content: '';
-      position: absolute;
-      top: -50%; left: -50%;
-      width: 200%; height: 200%;
-      background: linear-gradient(45deg, transparent, rgba(0,255,255,0.1), transparent);
-      animation: shine 6s infinite;
-    }
-    @keyframes shine { 0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); } 100% { transform: translateX(100%) translateY(100%) rotate(45deg); } }
-
-    .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(500px, 1fr)); gap: 30px; padding: 20px; }
     .chart-card {
-      background: rgba(0,0,0,0.6);
-      border: 3px solid #00ffff;
-      border-radius: 20px;
-      padding: 25px;
-      box-shadow: 0 0 50px rgba(0,255,255,0.4);
-      backdrop-filter: blur(15px);
+      background: rgba(0,0,0,0.4);
+      border: 2px solid #00ffff;
+      border-radius: 15px;
+      padding: 20px;
+      box-shadow: 0 0 30px rgba(0,255,255,0.3);
+      backdrop-filter: blur(10px);
       position: relative;
-      animation: borderPulse 4s infinite;
     }
-    @keyframes borderPulse { 0%,100% { box-shadow: 0 0 50px rgba(0,255,255,0.4); } 50% { box-shadow: 0 0 80px rgba(0,255,255,0.8), 0 0 120px rgba(255,0,255,0.3); } }
+    .chart-card h3 { color: #00ffff; text-align: center; margin-bottom: 15px; font-size: 1.3rem; text-shadow: 0 0 10px #00ffff; }
+
+    .chart-center-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 2.5rem;
+      font-weight: bold;
+      text-shadow: 0 0 20px;
+      pointer-events: none;
+      z-index: 10;
+    }
+    .chart-center-text.small { font-size: 1.5rem; }
+    .chart-center-text.pink { color: #ff00ff; }
+    .chart-center-text.cyan { color: #00ffff; }
+
+    footer {
+      text-align: center;
+      padding: 40px;
+      color: #00ffff;
+      font-size: 1.1rem;
+      margin-top: 50px;
+    }
   </style>
 </head>
 <body>
-  <div class="cyber-bg"></div>
   <div class="stars"></div>
   <div class="glow-line"></div>
 
-  <h1>汉鸿店铺 · 2077 霓虹战情室</h1>
-  <p style="text-align:center;color:#00ffff;font-size:1.5rem;margin:10px;">阿里巴巴国际站实时作战中枢 · 数值爆炸视觉</p>
+  <header>
+    <h1>汉鸿店铺 · 霓虹战情室 Pro</h1>
+    <p style="color:#00ffff;font-size:1.4rem;">阿里巴巴国际站实时作战看板 · 图表中间显示数值</p>
+  </header>
 
   <div class="month-selector">
-    <select class="month-select" id="monthSelect"></select>
+    <select class="month-select" id="monthSelect">
+      <!-- JS动态填充 -->
+    </select>
   </div>
 
-  <div class="stats">
-    <div class="stat-card"><h3 class="big-number purple" id="totalExp">0</h3><p>总展现量</p></div>
-    <div class="stat-card"><h3 class="big-number cyan" id="totalVis">0</h3><p>总访客数</p></div>
-    <div class="stat-card"><h3 class="big-number purple" id="totalInq">0</h3><p>询盘总数</p></div>
-    <div class="stat-card"><h3 class="big-number cyan" id="totalRec">0</h3><p>接待总数</p></div>
-    <div class="stat-card"><h3 class="big-number" id="convRate">0%</h3><p>询盘转化率</p></div>
-    <div class="stat-card"><h3 class="big-number purple" id="adRate">0%</h3><p>广告占比</p></div>
+  <div class="container">
+    <div class="stats">
+      <div class="stat-card"><h3 id="totalExp">0</h3><p>总展现量</p></div>
+      <div class="stat-card"><h3 id="totalVis">0</h3><p>总访客数</p></div>
+      <div class="stat-card"><h3 id="totalInq">0</h3><p>询盘总数</p></div>
+      <div class="stat-card"><h3 id="totalRec">0</h3><p>接待总数</p></div>
+      <div class="stat-card"><h3 id="convRate">0%</h3><p>询盘转化率</p></div>
+      <div class="stat-card"><h3 id="adRate">0%</h3><p>广告占比</p></div>
+    </div>
+
+    <div class="charts-grid">
+      <div class="chart-card">
+        <h3>广告 vs 自然流量占比</h3>
+        <canvas id="pieChart"></canvas>
+        <div class="chart-center-text pink" id="pieCenter">92.8%</div>
+      </div>
+
+      <div class="chart-card">
+        <h3>周询盘 & 周接待人数趋势</h3>
+        <canvas id="weeklyChart"></canvas>
+        <div class="chart-center-text cyan" id="weeklyCenter">51</div>
+      </div>
+
+      <div class="chart-card">
+        <h3>月度询盘总量</h3>
+        <canvas id="monthlyChart"></canvas>
+      </div>
+
+      <div class="chart-card">
+        <h3>每日询盘增长热力图</h3>
+        <canvas id="heatmapChart"></canvas>
+      </div>
+
+      <div class="chart-card">
+        <h3>询盘转化漏斗</h3>
+        <canvas id="funnelChart"></canvas>
+      </div>
+
+      <div class="chart-card">
+        <h3>全期趋势（展现/访客/询盘）</h3>
+        <canvas id="trendChart"></canvas>
+      </div>
+    </div>
   </div>
 
-  <div class="charts-grid">
-    <div class="chart-card"><h3 style="color:#00ffff;text-align:center;">广告 vs 自然流量占比</h3><canvas id="pieChart"></canvas>
-      <div class="chart-center-mega" style="color:#ff00ff" id="pieCenter">92.8%</div>
-    </div>
-    <div class="chart-card"><h3 style="color:#00ffff;text-align:center;">周询盘 & 周接待趋势</h3><canvas id="weeklyChart"></canvas>
-      <div class="chart-center-mega" style="color:#00ffff;font-size:3.5rem" id="weeklyTotal">51</div>
-    </div>
-    <div class="chart-card"><h3 style="color:#00ffff;text-align:center;">月度询盘总量</h3><canvas id="monthlyChart"></canvas></div>
-    <div class="chart-card"><h3 style="color:#00ffff;text-align:center;">每日增长热力图</h3><canvas id="heatmapChart"></canvas></div>
-    <div class="chart-card"><h3 style="color:#00ffff;text-align:center;">询盘转化漏斗</h3><canvas id="funnelChart"></canvas></div>
-    <div class="chart-card"><h3 style="color:#00ffff;text-align:center;">全期趋势</h3><canvas id="trendChart"></canvas></div>
-  </div>
+  <footer>
+    数据最后更新：<span style="color:#ff00ff" id="lastUpdate">加载中...</span>
+  </footer>
 
   <script>
-    Chart.register(ChartDataLabels);
-    let allData = [], currentMonth = '';
+    let allData = [];
+    let currentMonth = '';
 
-    function excelToDate(s) {
-      const d = new Date(Math.round((s - 25569) * 86400 * 1000));
-      return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+    function excelToDate(serial) {
+      const utc_days = Math.floor(serial - 25569);
+      const date_info = new Date(utc_days * 86400 * 1000);
+      return new Date(date_info.getFullYear(), date_info.getMonth(), date_info.getDate());
     }
 
     async function loadData() {
       try {
-        const res = await fetch('data.xlsx?t=' + Date.now());
-        const ab = await res.arrayBuffer();
-        const wb = XLSX.read(ab, {type:'array'});
-        const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1});
+        const response = await fetch('data.xlsx?t=' + Date.now());
+        if (!response.ok) throw new Error('未找到 data.xlsx');
+        const arrayBuffer = await response.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
         allData = rows.slice(2)
           .filter(r => r[0] && !isNaN(r[0]))
           .map(r => ({
             date: excelToDate(Number(r[0])),
-            totalExp: Number(r[1])||0, adExp: Number(r[2])||0, naturalExp: Number(r[3])||0,
-            visitors: Number(r[4])||0, inquiries: Number(r[5])||0, reception: Number(r[6])||0
+            totalExp: Number(r[1]) || 0,
+            adExp: Number(r[2]) || 0,
+            naturalExp: Number(r[3]) || 0,
+            visitors: Number(r[4]) || 0,
+            inquiries: Number(r[5]) || 0,
+            reception: Number(r[6]) || 0,
           }))
-          .filter(d => d.totalExp > 0 || d.visitors > 0)
-          .sort((a,b) => a.date - b.date);
+          .filter(d => d.totalExp > 0 || d.visitors > 0);
+
+        allData.sort((a, b) => a.date - b.date);
+
+        if (allData.length === 0) throw new Error('无有效数据');
 
         initMonthSelector();
         const latest = allData[allData.length-1].date.toISOString().slice(0,7);
         document.getElementById('monthSelect').value = latest;
         switchMonth(latest);
-      } catch (e) { document.body.innerHTML += `<h2 style="color:red">加载失败：${e.message}</h2>`; }
+      } catch (e) {
+        document.body.innerHTML += `<h2 style="color:red;text-align:center">加载失败：${e.message}</h2>`;
+      }
     }
 
     function initMonthSelector() {
       const months = [...new Set(allData.map(d => d.date.toISOString().slice(0,7)))].sort();
-      const sel = document.getElementById('monthSelect');
-      months.forEach(m => sel.add(new Option(m, m)));
-      sel.onchange = () => switchMonth(sel.value);
+      const select = document.getElementById('monthSelect');
+      months.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m;
+        opt.textContent = m;
+        select.appendChild(opt);
+      });
+      select.onchange = () => switchMonth(select.value);
     }
 
     function switchMonth(month) {
       currentMonth = month;
-      const data = month ? allData.filter(d => d.date.toISOString().slice(0,7) === month) : allData;
-      const t = data.reduce((a,b)=>({
-        totalExp:a.totalExp+b.totalExp, visitors:a.visitors+b.visitors,
-        inquiries:a.inquiries+b.inquiries, reception:a.reception+b.reception,
-        adExp:a.adExp+b.adExp, naturalExp:a.naturalExp+b.naturalExp
-      }), {totalExp:0,visitors:0,inquiries:0,reception:0,adExp:0,naturalExp:0});
+      const displayData = currentMonth ? allData.filter(d => d.date.toISOString().slice(0,7) === month) : allData;
 
-      // 超炫总览数字
-      ['totalExp','totalVis','totalInq','totalRec'].forEach(id => {
-        const el = document.getElementById(id);
-        el.textContent = t[id.replace('total','').toLowerCase()].toLocaleString();
-        el.className = 'big-number ' + (id.includes('Inq') || id.includes('Rec') ? 'purple' : 'cyan');
-      });
-      document.getElementById('convRate').textContent = t.visitors ? (t.inquiries/t.visitors*100).toFixed(2)+'%' : '0%';
-      document.getElementById('adRate').textContent = t.totalExp ? (t.adExp/t.totalExp*100).toFixed(1)+'%' : '0%';
+      const total = displayData.reduce((a,b) => ({
+        totalExp: a.totalExp + b.totalExp,
+        visitors: a.visitors + b.visitors,
+        inquiries: a.inquiries + b.inquiries,
+        reception: a.reception + b.reception,
+        adExp: a.adExp + b.adExp,
+        naturalExp: a.naturalExp + b.naturalExp
+      }), {totalExp:0, visitors:0, inquiries:0, reception:0, adExp:0, naturalExp:0});
 
-      // 饼图 + 爆炸中心数值
-      const adPct = t.totalExp ? (t.adExp/t.totalExp*100).toFixed(1) : 0;
-      document.getElementById('pieCenter').textContent = `广告 ${adPct}%`;
+      // 更新总览
+      document.getElementById('totalExp').textContent = total.totalExp.toLocaleString();
+      document.getElementById('totalVis').textContent = total.visitors.toLocaleString();
+      document.getElementById('totalInq').textContent = total.inquiries;
+      document.getElementById('totalRec').textContent = total.reception;
+      document.getElementById('convRate').textContent = total.visitors ? (total.inquiries/total.visitors*100).toFixed(2)+'%' : '0%';
+      document.getElementById('adRate').textContent = total.totalExp ? (total.adExp/total.totalExp*100).toFixed(1)+'%' : '0%';
+      document.getElementById('lastUpdate').textContent = new Date().toLocaleString('zh-CN');
+
+      // 1. 饼图 + 中心文字
+      const adRate = total.totalExp ? (total.adExp/total.totalExp*100).toFixed(1) : 0;
+      document.getElementById('pieCenter').textContent = `广告 ${adRate}%`;
       new Chart(document.getElementById('pieChart'), {
-        type: 'doughnut', data: { datasets: [{ data: [t.adExp, t.naturalExp], backgroundColor: ['#ff00ff','#00ffff'], borderWidth: 6 }] },
-        options: { cutout: '70%', plugins: { legend: { labels: { color: '#00ffff' } }, datalabels: { display: false } } }
+        type: 'doughnut',
+        data: {
+          datasets: [{ data: [total.adExp, total.naturalExp], backgroundColor: ['#ff00ff', '#00ffff'], borderWidth: 4, borderColor: '#000' }]
+        },
+        options: { cutout: '70%', plugins: { legend: { position: 'bottom', labels: { color: '#00ffff' } } } }
       });
 
-      // 周趋势 + 爆炸数值
-      document.getElementById('weeklyTotal').textContent = t.inquiries;
-      const weeks = {}; data.forEach(d=>{const w=Math.ceil(d.date.getDate()/7); weeks[w]=(weeks[w]||{i:0,r:0}); weeks[w].i+=d.inquiries; weeks[w].r+=d.reception; });
-      const labels = Object.keys(weeks).sort((a,b)=>a-b).map(w=>`第${w}周`);
+      // 2. 周询盘&接待 + 中心文字
+      document.getElementById('weeklyCenter').textContent = total.inquiries;
+      const weeks = {};
+      displayData.forEach(d => {
+        const week = Math.ceil((d.date.getDate() + d.date.getDay()) / 7);
+        if (!weeks[week]) weeks[week] = { inq: 0, rec: 0 };
+        weeks[week].inq += d.inquiries;
+        weeks[week].rec += d.reception;
+      });
+      const weekLabels = Object.keys(weeks).sort((a,b)=>a-b);
       new Chart(document.getElementById('weeklyChart'), {
         type: 'line',
-        data: { labels, datasets: [
-          { label: '询盘', data: labels.map(w=>weeks[w.split('第')[1]].i), borderColor: '#ff00ff', tension: 0.4 },
-          { label: '接待', data: labels.map(w=>weeks[w.split('第')[1]].r), borderColor: '#00ffff', tension: 0.4 }
-        ]},
-        options: { plugins: { datalabels: { color: '#fff', backgroundColor: 'rgba(0,0,0,0.7)', borderRadius: 6, font: {weight:'bold',size:14} } } },
+        data: {
+          labels: weekLabels.map(w => `第${w}周`),
+          datasets: [
+            { label: '周询盘', data: weekLabels.map(w => weeks[w].inq), borderColor: '#ff00ff', tension: 0.4 },
+            { label: '周接待', data: weekLabels.map(w => weeks[w].rec), borderColor: '#00ffff', tension: 0.4 }
+          ]
+        },
+        options: { plugins: { legend: { labels: { color: '#00ffff' } } } }
+      });
+
+      // 其他图表（数值已全部显示在柱子上/中间）
+      // 月度柱状图顶部显示数值
+      const monthly = {};
+      allData.forEach(d => {
+        const m = d.date.toISOString().slice(0,7);
+        monthly[m] = (monthly[m] || 0) + d.inquiries;
+      });
+      new Chart(document.getElementById('monthlyChart'), {
+        type: 'bar',
+        data: {
+          labels: Object.keys(monthly).sort(),
+          datasets: [{
+            label: '月询盘总量',
+            data: Object.values(monthly),
+            backgroundColor: '#ff00ff'
+          }]
+        },
+        options: {
+          plugins: {
+            datalabels: {
+              color: '#00ffff',
+              anchor: 'end',
+              align: 'top',
+              font: { weight: 'bold', size: 14 }
+            }
+          }
+        },
         plugins: [ChartDataLabels]
       });
 
-      // 其他图表数值显示（柱顶、漏斗、热力图）全部保留最炫效果
-      // （代码同上一版，已包含全部爆炸数值显示）
+      // 漏斗图数值显示
+      new Chart(document.getElementById('funnelChart'), {
+        type: 'bar',
+        data: {
+          labels: ['总展现', '访客', '询盘', '接待'],
+          datasets: [{
+            data: [total.totalExp, total.visitors, total.inquiries, total.reception],
+            backgroundColor: ['#00ffff', '#ff00ff', '#ffff00', '#00ff88']
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          plugins: {
+            datalabels: { color: '#fff', font: { weight: 'bold' } }
+          }
+        },
+        plugins: [ChartDataLabels]
+      });
+
+      // 热力图柱子顶部显示数值
+      const growth = displayData.map((d,i) => i===0 ? 0 : ((d.inquiries - displayData[i-1].inquiries)/Math.max(displayData[i-1].inquiries,1)*100));
+      new Chart(document.getElementById('heatmapChart'), {
+        type: 'bar',
+        data: {
+          labels: displayData.map(d => d.date.getDate() + '日'),
+          datasets: [{
+            label: '每日增长率 %',
+            data: growth,
+            backgroundColor: growth.map(g => g > 0 ? '#00ff88' : '#ff0066')
+          }]
+        },
+        options: {
+          plugins: {
+            datalabels: {
+              color: '#fff',
+              formatter: (value) => value.toFixed(0) + '%',
+              font: { weight: 'bold' }
+            }
+          }
+        },
+        plugins: [ChartDataLabels]
+      });
     }
 
-    loadData();
+    // 加载 ChartDataLabels 插件（用于显示数值）
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2';
+    script.onload = loadData;
+    document.head.appendChild(script);
   </script>
 </body>
 </html>
