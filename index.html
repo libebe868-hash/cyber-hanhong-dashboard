@@ -6,7 +6,7 @@
   <title>汉鸿店铺 · 霓虹战情室 Pro</title>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/date-fns@2"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@500;700&display=swap');
     * { margin:0; padding:0; box-sizing:border-box; }
@@ -161,7 +161,6 @@
       <div class="stat-card"><h3 id="totalRec">0</h3><p>接待总数</p></div>
       <div class="stat-card"><h3 id="convRate">0%</h3><p>询盘转化率</p></div>
       <div class="stat-card"><h3 id="adRate">0%</h3><p>广告流量占比</p></div>
-      <div class="stat-card"><h3 id="momConv">0%</h3><p>环比询盘百分比</p></div>
     </div>
 
     <div class="charts-grid" id="charts" style="display:none;">
@@ -180,8 +179,6 @@
   </footer>
 
   <script>
-    Chart.register(ChartDataLabels);
-
     let allData = [];
     let currentMonth = ''; // 当前选中的月份 (YYYY-MM)
 
@@ -259,7 +256,7 @@
       renderAll();
     }
 
-    // 格式化日期
+    // 格式化日期 (date-fns)
     function format(date, fmt) {
       if (fmt === 'yyyy-MM') return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
       if (fmt === 'MM-dd') return String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
@@ -276,13 +273,6 @@
 
     // 渲染全部
     function renderAll() {
-      // 销毁现有图表
-      const chartIds = ['trendChart', 'pieChart', 'weeklyChart', 'funnelChart', 'monthlyChart', 'heatmapChart'];
-      chartIds.forEach(id => {
-        const chart = Chart.getChart(id);
-        if (chart) chart.destroy();
-      });
-
       let displayData = allData;
       if (currentMonth) {
         displayData = allData.filter(d => format(d.date, 'yyyy-MM') === currentMonth);
@@ -297,45 +287,13 @@
         naturalExp: acc.naturalExp + d.naturalExp
       }), { totalExp: 0, visitors: 0, inquiries: 0, reception: 0, adExp: 0, naturalExp: 0 });
 
-      // 计算当前转化率
-      const convRate = total.visitors > 0 ? (total.inquiries / total.visitors * 100) : 0;
-
-      // 计算上个月
-      const currentDate = new Date(currentMonth + '-01');
-      let lastMonthYear = currentDate.getFullYear();
-      let lastMonthMonth = currentDate.getMonth(); // 0-based
-      if (lastMonthMonth === 0) {
-        lastMonthMonth = 12;
-        lastMonthYear--;
-      } else {
-        lastMonthMonth--;
-      }
-      const lastMonth = lastMonthYear + '-' + String(lastMonthMonth + 1).padStart(2, '0');
-      const lastMonthData = allData.filter(d => format(d.date, 'yyyy-MM') === lastMonth);
-      const lastTotal = lastMonthData.reduce((acc, d) => ({
-        visitors: acc.visitors + d.visitors,
-        inquiries: acc.inquiries + d.inquiries
-      }), { visitors: 0, inquiries: 0 });
-      const lastConvRate = lastTotal.visitors > 0 ? (lastTotal.inquiries / lastTotal.visitors * 100) : 0;
-
-      // 计算环比
-      let momConv = 'N/A';
-      if (lastConvRate > 0) {
-        momConv = ((convRate - lastConvRate) / lastConvRate * 100).toFixed(2) + '%';
-      } else if (convRate > 0) {
-        momConv = '∞%'; // 如果上月为0，本月有增长
-      } else if (lastConvRate === 0 && convRate === 0) {
-        momConv = '0%';
-      }
-
       // 更新总览（添加接待）
       document.getElementById('totalExp').textContent = total.totalExp.toLocaleString();
       document.getElementById('totalVis').textContent = total.visitors.toLocaleString();
       document.getElementById('totalInq').textContent = total.inquiries;
       document.getElementById('totalRec').textContent = total.reception;
-      document.getElementById('convRate').textContent = convRate.toFixed(2) + '%';
+      document.getElementById('convRate').textContent = total.visitors > 0 ? (total.inquiries / total.visitors * 100).toFixed(2) + '%' : '0%';
       document.getElementById('adRate').textContent = total.totalExp > 0 ? (total.adExp / total.totalExp * 100).toFixed(1) + '%' : '0%';
-      document.getElementById('momConv').textContent = momConv;
       document.getElementById('lastUpdate').textContent = new Date().toLocaleString('zh-CN');
 
       document.getElementById('loading').style.display = 'none';
@@ -344,7 +302,7 @@
 
       const labels = displayData.map(d => format(d.date, 'MM-dd'));
 
-      // 1. 趋势图（添加数据点显示）
+      // 1. 趋势图
       new Chart(document.getElementById('trendChart'), {
         type: 'line',
         data: {
@@ -357,41 +315,21 @@
         },
         options: {
           scales: { y: { position: 'left', grid: { color: 'rgba(0,255,255,0.1)' } }, y1: { position: 'right', grid: { drawOnChartArea: false } } },
-          plugins: { 
-            legend: { labels: { color: '#00ffff' } },
-            datalabels: {
-              color: '#fff',
-              anchor: 'end',
-              align: 'top',
-              formatter: Math.round
-            }
-          }
+          plugins: { legend: { labels: { color: '#00ffff' } } }
         }
       });
 
-      // 2. 饼图（添加数据显示）
+      // 2. 饼图
       new Chart(document.getElementById('pieChart'), {
         type: 'doughnut',
         data: {
           labels: ['广告展现', '自然展现'],
           datasets: [{ data: [total.adExp, total.naturalExp], backgroundColor: ['#ff00ff', '#00ffff'], borderWidth: 3 }]
         },
-        options: { 
-          plugins: { 
-            legend: { position: 'bottom', labels: { color: '#00ffff' } },
-            datalabels: {
-              color: '#fff',
-              formatter: function(value, ctx) {
-                const total = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
-                const percentage = Math.round(value / total * 100) + '%';
-                return ctx.chart.data.labels[ctx.dataIndex] + ': ' + value + ' (' + percentage + ')';
-              }
-            }
-          } 
-        }
+        options: { plugins: { legend: { position: 'bottom', labels: { color: '#00ffff' } } } }
       });
 
-      // 3. 周询盘 & 周接待趋势（添加数据点显示）
+      // 3. 周询盘 & 周接待趋势
       const weeks = {};
       displayData.forEach(d => {
         const week = getWeekNumber(d.date);
@@ -409,17 +347,7 @@
             { label: '周接待', data: weekLabels.map(w => weeks[w].reception), borderColor: '#00ffff', tension: 0.4 }
           ]
         },
-        options: { 
-          plugins: { 
-            legend: { labels: { color: '#00ffff' } },
-            datalabels: {
-              color: '#fff',
-              anchor: 'end',
-              align: 'top',
-              formatter: Math.round
-            }
-          } 
-        }
+        options: { plugins: { legend: { labels: { color: '#00ffff' } } } }
       });
 
       // 4. 漏斗（添加接待）
@@ -450,17 +378,7 @@
           labels: monthLabels,
           datasets: [{ label: '月询盘总量', data: monthLabels.map(m => months[m]), backgroundColor: '#ff00ff' }]
         },
-        options: { 
-          plugins: { 
-            legend: { labels: { color: '#00ffff' } },
-            datalabels: {
-              color: '#fff',
-              anchor: 'end',
-              align: 'top',
-              formatter: Math.round
-            }
-          } 
-        }
+        options: { plugins: { legend: { labels: { color: '#00ffff' } } } }
       });
 
       // 6. 热力图
@@ -475,17 +393,7 @@
             backgroundColor: growthData.map(g => g > 0 ? 'rgba(0,255,136,0.8)' : 'rgba(255,0,102,0.8)') 
           }]
         },
-        options: { 
-          plugins: { 
-            legend: { labels: { color: '#00ffff' } },
-            datalabels: {
-              color: '#fff',
-              anchor: 'end',
-              align: 'top',
-              formatter: (value) => value.toFixed(2) + '%'
-            }
-          } 
-        }
+        options: { plugins: { legend: { labels: { color: '#00ffff' } } } }
       });
     }
 
