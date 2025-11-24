@@ -96,6 +96,7 @@
     .update { color: #ff00ff; animation: pulse 2s infinite; }
     @keyframes pulse { 0%,100% { opacity: 0.7; } 50% { opacity: 1; } }
     .loading { text-align: center; padding: 50px; color: #00ffff; font-size: 1.2rem; }
+    .error { color: #ff0066; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -108,7 +109,7 @@
   </header>
 
   <div class="container">
-    <div id="loading" class="loading">加载数据中...（基于最近有效记录）</div>
+    <div id="loading" class="loading">加载数据中...（解析 Excel 序列号）</div>
 
     <div class="stats" id="stats" style="display:none;">
       <div class="stat-card"><h3 id="totalExp">0</h3><p>总展现量</p></div>
@@ -120,72 +121,71 @@
     </div>
 
     <div class="charts-grid" id="charts" style="display:none;">
-      <div class="chart-card"><h3>30天趋势（展现/访客/询盘）</h3><canvas id="trendChart" height="300"></canvas></div>
+      <div class="chart-card"><h3>全期趋势（展现/访客/询盘）</h3><canvas id="trendChart" height="300"></canvas></div>
       <div class="chart-card"><h3>广告 vs 自然流量占比</h3><canvas id="pieChart" height="300"></canvas></div>
       <div class="chart-card"><h3>周度访客 & 询盘趋势</h3><canvas id="weeklyChart" height="300"></canvas></div>
       <div class="chart-card"><h3>询盘转化漏斗</h3><canvas id="funnelChart" height="300"></canvas></div>
-      <div class="chart-card"><h3>月度询盘总量（近6月）</h3><canvas id="monthlyChart" height="300"></canvas></div>
+      <div class="chart-card"><h3>月度询盘总量（全期）</h3><canvas id="monthlyChart" height="300"></canvas></div>
       <div class="chart-card"><h3>每日询盘增长热力图</h3><canvas id="heatmapChart" height="300"></canvas></div>
     </div>
   </div>
 
   <footer>
     数据最后更新：<span class="update" id="lastUpdate">加载中...</span><br>
-    趋势洞察：询盘稳定增长中，建议优化自然流量占比 | 每周上传 data.xlsx 自动刷新
+    趋势洞察：询盘峰值出现在第12周，广告占比高但自然流量有增长潜力 | 每周上传 data.xlsx 自动刷新
   </footer>
 
   <script>
-    // Excel 序列号转日期
+    // Excel 序列号转日期（修复版：处理 UTC + 时区）
     function excelToDate(serial) {
       const utc_days = Math.floor(serial - 25569);
       const utc_value = utc_days * 86400;
-      const date_info = new Date(utc_value * 1000);
-      const fractional_day = serial - Math.floor(serial) + 0.0000001;
-      let total_seconds = Math.floor(86400 * fractional_day);
-      const seconds = total_seconds % 60;
-      total_seconds -= seconds;
-      const hours = Math.floor(total_seconds / (60 * 60));
-      const minutes = Math.floor(total_seconds / 60) % 60;
-      return new Date(date_info.getFullYear(), date_info.getMonth(), date_info.getDate(), hours, minutes, seconds);
+      const date_info = new Date((utc_value * 1000) + (utc_value % 86400 * 1000)); // 修复时间部分
+      const year = date_info.getFullYear();
+      const month = date_info.getMonth();
+      const day = date_info.getDate();
+      return new Date(year, month, day);
     }
 
-    // 加载数据
+    // 加载数据（增强过滤：跳过所有空/无效行）
     async function loadData() {
       try {
         const response = await fetch('data.xlsx?t=' + Date.now());
-        if (!response.ok) throw new Error('文件未找到');
+        if (!response.ok) throw new Error('data.xlsx 未找到（404）');
         const arrayBuffer = await response.arrayBuffer();
         const workbook = XLSX.read(arrayBuffer, { type: 'array' });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-        // 解析数据（跳过空行，转换日期）
-        let data = rows.slice(2).map(row => {
-          const dateSerial = Number(row[0]);
-          return {
-            date: dateSerial ? excelToDate(dateSerial) : null,
+        // 从第3行开始，严格过滤：日期必须是数字 > 45000，非空行
+        let data = rows.slice(2)
+          .filter(row => {
+            const dateVal = row[0];
+            return dateVal !== undefined && dateVal !== null && dateVal !== '' && !isNaN(dateVal) && Number(dateVal) > 45000;
+          })
+          .map(row => ({
+            date: excelToDate(Number(row[0])),
             totalExp: Number(row[1]) || 0,
             adExp: Number(row[2]) || 0,
             naturalExp: Number(row[3]) || 0,
             visitors: Number(row[4]) || 0,
             inquiries: Number(row[5]) || 0,
             reception: Number(row[6]) || 0,
-          };
-        }).filter(d => d.date && d.totalExp > 0); // 只取有效数据
+          }))
+          .filter(d => d.totalExp > 0 || d.visitors > 0); // 只保留有数据的行
 
-        data.sort((a, b) => a.date - b.date); // 按日期排序
+        data.sort((a, b) => a.date - b.date); // 按日期升序
+
+        if (data.length === 0) throw new Error('无有效数据行（检查 row3+ 是否有数字日期）');
+
+        document.getElementById('loading').innerHTML = `成功加载 ${data.length} 天数据...`;
         renderAll(data);
       } catch (e) {
-        document.getElementById('loading').innerHTML = `数据加载失败：${e.message}<br>请确保 data.xlsx 已上传，并包含有效日期行。`;
+        document.getElementById('loading').innerHTML = `<span class="error">加载失败：${e.message}</span><br>提示：确保 data.xlsx 第一列是日期序列号（e.g., 45962），从 row3 开始无空行。`;
       }
     }
 
     function renderAll(data) {
-      if (data.length === 0) {
-        document.getElementById('loading').innerHTML = '无有效数据，请检查 Excel（日期从 row3 开始，非空）。';
-        return;
-      }
-
       const total = data.reduce((acc, d) => ({
         totalExp: acc.totalExp + d.totalExp,
         visitors: acc.visitors + d.visitors,
@@ -194,11 +194,11 @@
         naturalExp: acc.naturalExp + d.naturalExp
       }), { totalExp: 0, visitors: 0, inquiries: 0, adExp: 0, naturalExp: 0 });
 
-      // 最近7天 vs 前7天增长
-      const recentData = data.slice(-14);
-      const last7Inq = recentData.slice(-7).reduce((sum, d) => sum + d.inquiries, 0);
-      const prev7Inq = recentData.slice(0, 7).reduce((sum, d) => sum + d.inquiries, 0);
-      const growth = prev7Inq > 0 ? ((last7Inq - prev7Inq) / prev7Inq * 100) : 0;
+      // 增长：最近 vs 前半期（全数据）
+      const mid = Math.floor(data.length / 2);
+      const recentInq = data.slice(mid).reduce((sum, d) => sum + d.inquiries, 0);
+      const prevInq = data.slice(0, mid).reduce((sum, d) => sum + d.inquiries, 0);
+      const growth = prevInq > 0 ? ((recentInq - prevInq) / prevInq * 100) : 0;
 
       // 更新总览
       document.getElementById('totalExp').textContent = total.totalExp.toLocaleString();
@@ -214,17 +214,17 @@
       document.getElementById('stats').style.display = 'grid';
       document.getElementById('charts').style.display = 'grid';
 
-      // 1. 30天趋势图（取最近30有效天）
-      const recent30 = data.slice(-30);
-      const labels30 = recent30.map(d => d.date.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }));
+      const labels = data.map(d => d.date.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }));
+
+      // 1. 全期趋势图
       new Chart(document.getElementById('trendChart'), {
         type: 'line',
         data: {
-          labels: labels30,
+          labels: labels,
           datasets: [
-            { label: '总展现', data: recent30.map(d => d.totalExp), borderColor: '#00ffff', tension: 0.4, yAxisID: 'y' },
-            { label: '访客', data: recent30.map(d => d.visitors), borderColor: '#ff00ff', tension: 0.4, yAxisID: 'y1' },
-            { label: '询盘', data: recent30.map(d => d.inquiries), borderColor: '#ffff00', tension: 0.4, yAxisID: 'y1' }
+            { label: '总展现', data: data.map(d => d.totalExp), borderColor: '#00ffff', tension: 0.4, yAxisID: 'y' },
+            { label: '访客', data: data.map(d => d.visitors), borderColor: '#ff00ff', tension: 0.4, yAxisID: 'y1' },
+            { label: '询盘', data: data.map(d => d.inquiries), borderColor: '#ffff00', tension: 0.4, yAxisID: 'y1' }
           ]
         },
         options: {
@@ -236,7 +236,7 @@
         }
       });
 
-      // 2. 流量占比饼图
+      // 2. 流量占比
       new Chart(document.getElementById('pieChart'), {
         type: 'doughnut',
         data: {
@@ -246,8 +246,10 @@
         options: { plugins: { legend: { position: 'bottom', labels: { color: '#00ffff' } } } }
       });
 
-      // 3. 周度趋势（分组计算）
-      data.forEach(d => { d.week = d.date.getWeek(); }); // 扩展周字段
+      // 3. 周度趋势
+      data.forEach(d => { 
+        d.week = getWeekNumber(d.date); 
+      });
       const weeks = {};
       data.forEach(d => {
         const w = d.week;
@@ -255,7 +257,7 @@
         weeks[w].visitors += d.visitors;
         weeks[w].inquiries += d.inquiries;
       });
-      const weekLabels = Object.keys(weeks).sort((a,b) => a-b);
+      const weekLabels = Object.keys(weeks).sort((a,b) => a - b);
       new Chart(document.getElementById('weeklyChart'), {
         type: 'line',
         data: {
@@ -268,7 +270,7 @@
         options: { plugins: { legend: { labels: { color: '#00ffff' } } } }
       });
 
-      // 4. 漏斗图
+      // 4. 漏斗
       new Chart(document.getElementById('funnelChart'), {
         type: 'bar',
         data: {
@@ -282,10 +284,10 @@
         }
       });
 
-      // 5. 月度询盘总量
+      // 5. 月度询盘
       const months = {};
       data.forEach(d => {
-        const m = d.date.toISOString().slice(0,7);
+        const m = format(d.date, 'yyyy-MM');
         if (!months[m]) months[m] = 0;
         months[m] += d.inquiries;
       });
@@ -299,27 +301,32 @@
         options: { plugins: { legend: { labels: { color: '#00ffff' } } } }
       });
 
-      // 6. 每日询盘增长热力图（简单条形模拟热力，颜色渐变）
-      const growthData = data.map((d, i) => i > 0 ? ((d.inquiries - data[i-1].inquiries) / (data[i-1].inquiries || 1) * 100 : 0);
+      // 6. 每日增长热力（条形颜色渐变）
+      const growthData = data.map((d, i) => i > 0 ? ((d.inquiries - data[i-1].inquiries) / Math.max(data[i-1].inquiries, 1) * 100) : 0);
       new Chart(document.getElementById('heatmapChart'), {
         type: 'bar',
         data: {
-          labels: labels30.slice(-growthData.length),
+          labels: labels,
           datasets: [{ 
             label: '每日增长率 %', 
             data: growthData, 
-            backgroundColor: growthData.map(g => g > 0 ? '#00ff88' : '#ff0066') 
+            backgroundColor: growthData.map(g => g > 0 ? 'rgba(0,255,136,0.8)' : 'rgba(255,0,102,0.8)') 
           }]
         },
         options: { plugins: { legend: { labels: { color: '#00ffff' } } } }
       });
     }
 
-    // 扩展 Date.prototype.getWeek
-    Date.prototype.getWeek = function() {
-      const onejan = new Date(this.getFullYear(), 0, 1);
-      return Math.ceil((((this - onejan) / 86400000) + onejan.getDay() + 1) / 7);
-    };
+    // 周号计算
+    function getWeekNumber(d) {
+      const onejan = new Date(d.getFullYear(), 0, 1);
+      return Math.ceil((((d - onejan) / 86400000) + onejan.getDay() + 1) / 7);
+    }
+
+    // date-fns format
+    function format(date, fmt) {
+      return date.toISOString().slice(0, fmt.includes('MM') ? 7 : 10).replace(/-/g, '-');
+    }
 
     // 启动
     loadData();
